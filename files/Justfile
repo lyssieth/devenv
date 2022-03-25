@@ -1,0 +1,8 @@
+push: build
+    docker push lyssieth/{ProjectName_Lowercase}:latest
+
+build:
+    docker buildx build -t "lyssieth/{ProjectName_Lowercase}" .
+
+run: build
+    docker run -it -v /data/{ProjectName}:/config lyssieth/{ProjectName_Lowercase}

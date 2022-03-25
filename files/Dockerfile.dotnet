@@ -1,0 +1,24 @@
+FROM mcr.microsoft.com/dotnet/sdk:6.0 as build
+
+ENV CONTAINER=true
+
+WORKDIR /source
+
+COPY *.csproj .
+RUN dotnet restore
+
+COPY . .
+RUN dotnet publish -c Release -o /app --no-restore
+
+
+FROM mcr.microsoft.com/dotnet/runtime:6.0
+
+ENV CONTAINER=true
+
+WORKDIR /app
+
+COPY --from=build /app .
+
+VOLUME [ "/config" ]
+
+ENTRYPOINT [ "dotnet", "{ProjectName}.dll" ]
