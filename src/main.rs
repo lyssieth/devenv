@@ -19,10 +19,15 @@ fn main() -> Res<()> {
         match x {
             FileType::Dockerfile => generate_dockerfile(),
             FileType::Justfile => generate_justfile(),
+            FileType::Drone => generate_drone(),
         }?;
     }
 
     Ok(())
+}
+
+fn generate_drone() -> Res<()> {
+    todo!("implement drone generation");
 }
 
 fn generate_dockerfile() -> Res<()> {
@@ -167,6 +172,7 @@ enum ProjectLanguage {
 enum FileType {
     Dockerfile,
     Justfile,
+    Drone,
 }
 
 impl FromStr for FileType {
@@ -176,6 +182,7 @@ impl FromStr for FileType {
         match s.to_lowercase().as_str() {
             "dockerfile" | "docker" => Ok(FileType::Dockerfile),
             "justfile" | "just" => Ok(FileType::Justfile),
+            "drone" => Ok(FileType::Drone),
             _ => Err(format!("Unknown file type: {}", s)),
         }
     }
