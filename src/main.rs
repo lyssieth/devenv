@@ -98,6 +98,8 @@ fn generate_dockerfile() -> Res<()> {
 fn generate_justfile() -> Res<()> {
     let cwd = std::env::current_dir()?;
 
+    // TODO: Add Justfile detection so we don't override by accident lmfao
+
     let project_name = cwd.file_name().unwrap();
     let project_name = project_name.to_string_lossy();
     let project_name = project_name.as_ref();
