@@ -1,0 +1,17 @@
+﻿kind: pipeline
+type: docker
+name: {ProjectName} Pipeline
+
+steps:
+  - name: compile
+    image: mcr.microsoft.com/dotnet/sdk 
+    commands:
+      - dotnet build
+  - name: build-image
+    image: plugins/docker
+    settings:
+      dockerfile: Dockerfile
+      username: lyssieth
+      password:
+        from_secret: docker_password
+      repo: lyssieth/{ProjectName_Lowercase}
