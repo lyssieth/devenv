@@ -26,10 +26,6 @@ fn main() -> Res<()> {
     Ok(())
 }
 
-fn generate_drone() -> Res<()> {
-    todo!("implement drone generation");
-}
-
 fn generate_dockerfile() -> Res<()> {
     let cwd = std::env::current_dir()?;
 
@@ -95,10 +91,78 @@ fn generate_dockerfile() -> Res<()> {
     Ok(())
 }
 
+fn generate_drone() -> Res<()> {
+    let cwd = std::env::current_dir()?;
+
+    let rd = cwd.read_dir()?;
+
+    let mut project_language = ProjectLanguage::Unknown;
+
+    for x in rd {
+        let x = x?;
+
+        let file_name = x.file_name();
+        let file_name = file_name.to_string_lossy();
+        let file_name = file_name.as_ref();
+
+        if file_name == ".drone.yml" {
+            warn!(".drone.yml already exists, will not overwrite.");
+            return Ok(());
+        }
+
+        match file_name {
+            "Cargo.toml" | "Cargo.lock" => {
+                project_language = ProjectLanguage::Rust;
+                break;
+            }
+            _ => {}
+        };
+
+        if file_name.ends_with("csproj") || file_name.ends_with("sln") {
+            project_language = ProjectLanguage::Dotnet;
+            break;
+        }
+    }
+
+    let project_name = cwd.file_name().unwrap();
+    let project_name = project_name.to_string_lossy();
+    let project_name = project_name.as_ref();
+
+    let mut base = match project_language {
+        ProjectLanguage::Rust => files::DRONE_RUST.to_owned(),
+        ProjectLanguage::Dotnet => files::DRONE_DOTNET.to_owned(),
+        ProjectLanguage::Unknown => {
+            error!("Could not determine project language.");
+            return Ok(());
+        }
+    };
+
+    base = replace_keyword(&base, Keyword::ProjectName, project_name);
+    base = replace_keyword(
+        &base,
+        Keyword::ProjectNameLowercase,
+        &project_name.to_lowercase(),
+    );
+    base = replace_keyword(
+        &base,
+        Keyword::ProjectNameDashesToUnderscores,
+        &project_name.replace('-', "_"),
+    );
+
+    let mut file = File::create(".drone.yml")?;
+
+    file.write_all(base.as_bytes())?;
+
+    Ok(())
+}
+
 fn generate_justfile() -> Res<()> {
     let cwd = std::env::current_dir()?;
 
-    // TODO: Add Justfile detection so we don't override by accident lmfao
+    if cwd.join("Justfile").exists() {
+        warn!("Justfile already exists, will not overwrite.");
+        return Ok(());
+    }
 
     let project_name = cwd.file_name().unwrap();
     let project_name = project_name.to_string_lossy();
