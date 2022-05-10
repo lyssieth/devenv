@@ -36,7 +36,7 @@ fn which(which: SupportedKinds) -> PathBuf {
 }
 
 /// We use an extension so it's obvious that it's not _just_ an editable file.
-const EXTENSION: &str = ".bc";
+const EXTENSION: &str = "bc";
 
 pub fn get_file(sk: SupportedKinds, platform: &str, language: &str) -> Res<DevFile> {
     if !root().exists() {

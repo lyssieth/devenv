@@ -32,12 +32,7 @@ pub(super) fn run(args: Args) -> Res<()> {
 
         tt.add_template("data", &data)?;
 
-        let output = tt.render(
-            "data",
-            &Template {
-                project_name: get_project_name(),
-            },
-        )?;
+        let output = tt.render("data", &Template::from_project_name(&get_project_name()))?;
 
         File::create(&x.filename())?.write_all(output.as_bytes())?;
     }

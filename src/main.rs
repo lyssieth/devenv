@@ -73,6 +73,22 @@ fn main() -> Res<()> {
 struct Template {
     #[serde(rename = "ProjectName")]
     project_name: String,
+
+    #[serde(rename = "ProjectName_DashesToUnderscores")]
+    project_name_dashes_to_underscores: String,
+
+    #[serde(rename = "ProjectName_Lowercase")]
+    project_name_lowercase: String,
+}
+
+impl Template {
+    pub fn from_project_name(project_name: &str) -> Self {
+        Self {
+            project_name: project_name.to_string(),
+            project_name_dashes_to_underscores: project_name.replace('-', "_"),
+            project_name_lowercase: project_name.to_lowercase(),
+        }
+    }
 }
 
 /// An application for managing various development environment things.

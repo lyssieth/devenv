@@ -1,4 +1,4 @@
-FROM rustlang/rust:nightly as builder
+FROM rust:latest as builder
 
 ENV CONTAINER=true
 
@@ -20,11 +20,6 @@ RUN cargo build --release
 
 FROM debian:bullseye-slim as runner
 
-LABEL name="lyssieth/{ProjectName}"
-LABEL maintainer="Lyssieth <lyssieth@rax.ee>"
-
-RUN apt update
-RUN apt-get install --yes ca-certificates
 RUN mkdir -p /config
 
 COPY --from=builder /{ProjectName}/target/release/{ProjectName_DashesToUnderscores} /usr/bin/{ProjectName}
