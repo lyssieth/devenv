@@ -48,8 +48,14 @@ pub fn get_file(sk: SupportedKinds, platform: &str, language: &str) -> Res<DevFi
         fs::create_dir(which(sk))?;
     }
 
+    let path = if path.exists() {
+        path
+    } else {
+        which(sk).join(format!("{}-{}.{}", platform, "any", EXTENSION))
+    };
+
     if !path.exists() {
-        warn!("There is no `{language}` file for `{platform}` for `{sk}`");
+        warn!("There is no `{language}` or `any` file for `{platform}` & `{sk}`");
         return Err(eyre!("No file found"));
     }
 
