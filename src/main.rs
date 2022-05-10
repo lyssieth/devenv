@@ -1,255 +1,138 @@
 #![warn(clippy::pedantic)]
 
-use std::{fmt, fs::File, io::Write, str::FromStr};
+use std::{fmt, path::PathBuf, str::FromStr};
 
-use clap::Parser;
-use color_eyre::Report;
-use paris::{error, warn};
+use argh::FromArgs;
+use color_eyre::{eyre::eyre, Report};
+use paris::warn;
+use serde::{Deserialize, Serialize};
 
 mod files;
 
+mod create;
+mod generate;
+
 type Res<T> = Result<T, Report>;
+
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+pub enum SupportedKinds {
+    Docker,
+    Drone,
+    Just,
+}
+
+impl SupportedKinds {
+    #[must_use]
+    pub fn filename(&self) -> String {
+        match self {
+            Self::Docker => "Dockerfile".to_string(),
+            Self::Drone => ".drone.yml".to_string(),
+            Self::Just => "Justfile".to_string(),
+        }
+    }
+}
+
+impl fmt::Display for SupportedKinds {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Docker => write!(f, "docker"),
+            Self::Drone => write!(f, "drone"),
+            Self::Just => write!(f, "just"),
+        }
+    }
+}
+
+impl FromStr for SupportedKinds {
+    type Err = Report;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "docker" | "dockerfile" => Ok(Self::Docker),
+            "drone" => Ok(Self::Drone),
+            "just" | "justfile" => Ok(Self::Just),
+
+            _ => Err(eyre!("Unknown kind: {}", s)),
+        }
+    }
+}
 
 fn main() -> Res<()> {
     color_eyre::install()?;
 
-    let Args { file_types } = Args::parse();
+    let args: Args = argh::from_env();
 
-    for x in file_types {
-        match x {
-            FileType::Dockerfile => generate_dockerfile(),
-            FileType::Justfile => generate_justfile(),
-            FileType::Drone => generate_drone(),
-        }?;
-    }
+    match args.command {
+        Command::Create(_) => create::run(args),
+        Command::Generate(_) => generate::run(args),
+    }?;
 
     Ok(())
 }
 
-fn generate_dockerfile() -> Res<()> {
-    let cwd = std::env::current_dir()?;
-
-    let rd = cwd.read_dir()?;
-
-    let mut project_language = ProjectLanguage::Unknown;
-
-    for x in rd {
-        let x = x?;
-
-        let file_name = x.file_name();
-        let file_name = file_name.to_string_lossy();
-        let file_name = file_name.as_ref();
-
-        if file_name == "Dockerfile" {
-            warn!("Dockerfile already exists, will not overwrite.");
-            return Ok(());
-        }
-
-        match file_name {
-            "Cargo.toml" | "Cargo.lock" => {
-                project_language = ProjectLanguage::Rust;
-                break;
-            }
-            _ => {}
-        };
-
-        if file_name.ends_with("csproj") || file_name.ends_with("sln") {
-            project_language = ProjectLanguage::Dotnet;
-            break;
-        }
-    }
-
-    let project_name = cwd.file_name().unwrap();
-    let project_name = project_name.to_string_lossy();
-    let project_name = project_name.as_ref();
-
-    let mut base = match project_language {
-        ProjectLanguage::Rust => files::DOCKERFILE_RUST.to_owned(),
-        ProjectLanguage::Dotnet => files::DOCKERFILE_DOTNET.to_owned(),
-        ProjectLanguage::Unknown => {
-            error!("Could not determine project language.");
-            return Ok(());
-        }
-    };
-
-    base = replace_keyword(&base, Keyword::ProjectName, project_name);
-    base = replace_keyword(
-        &base,
-        Keyword::ProjectNameLowercase,
-        &project_name.to_lowercase(),
-    );
-    base = replace_keyword(
-        &base,
-        Keyword::ProjectNameDashesToUnderscores,
-        &project_name.replace('-', "_"),
-    );
-
-    let mut file = File::create("Dockerfile")?;
-
-    file.write_all(base.as_bytes())?;
-
-    Ok(())
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct Template {
+    #[serde(rename = "ProjectName")]
+    project_name: String,
 }
 
-fn generate_drone() -> Res<()> {
-    let cwd = std::env::current_dir()?;
-
-    let rd = cwd.read_dir()?;
-
-    let mut project_language = ProjectLanguage::Unknown;
-
-    for x in rd {
-        let x = x?;
-
-        let file_name = x.file_name();
-        let file_name = file_name.to_string_lossy();
-        let file_name = file_name.as_ref();
-
-        if file_name == ".drone.yml" {
-            warn!(".drone.yml already exists, will not overwrite.");
-            return Ok(());
-        }
-
-        match file_name {
-            "Cargo.toml" | "Cargo.lock" => {
-                project_language = ProjectLanguage::Rust;
-                break;
-            }
-            _ => {}
-        };
-
-        if file_name.ends_with("csproj") || file_name.ends_with("sln") {
-            project_language = ProjectLanguage::Dotnet;
-            break;
-        }
-    }
-
-    let project_name = cwd.file_name().unwrap();
-    let project_name = project_name.to_string_lossy();
-    let project_name = project_name.as_ref();
-
-    let mut base = match project_language {
-        ProjectLanguage::Rust => files::DRONE_RUST.to_owned(),
-        ProjectLanguage::Dotnet => files::DRONE_DOTNET.to_owned(),
-        ProjectLanguage::Unknown => {
-            error!("Could not determine project language.");
-            return Ok(());
-        }
-    };
-
-    base = replace_keyword(&base, Keyword::ProjectName, project_name);
-    base = replace_keyword(
-        &base,
-        Keyword::ProjectNameLowercase,
-        &project_name.to_lowercase(),
-    );
-    base = replace_keyword(
-        &base,
-        Keyword::ProjectNameDashesToUnderscores,
-        &project_name.replace('-', "_"),
-    );
-
-    let mut file = File::create(".drone.yml")?;
-
-    file.write_all(base.as_bytes())?;
-
-    Ok(())
-}
-
-fn generate_justfile() -> Res<()> {
-    let cwd = std::env::current_dir()?;
-
-    if cwd.join("Justfile").exists() {
-        warn!("Justfile already exists, will not overwrite.");
-        return Ok(());
-    }
-
-    let project_name = cwd.file_name().unwrap();
-    let project_name = project_name.to_string_lossy();
-    let project_name = project_name.as_ref();
-
-    let mut base = files::JUSTFILE.to_owned();
-
-    base = replace_keyword(&base, Keyword::ProjectName, project_name);
-    base = replace_keyword(
-        &base,
-        Keyword::ProjectNameLowercase,
-        &project_name.to_lowercase(),
-    );
-    base = replace_keyword(
-        &base,
-        Keyword::ProjectNameDashesToUnderscores,
-        &project_name.replace('-', "_"),
-    );
-
-    let mut file = File::create("Justfile")?;
-
-    file.write_all(base.as_bytes())?;
-
-    Ok(())
-}
-
-fn replace_keyword(inside: &str, keyword: Keyword, with: &str) -> String {
-    let mut result = inside.to_owned();
-
-    let keyword = keyword.to_string();
-
-    result = result.replace(&keyword, with);
-
-    result
-}
-
-#[derive(Debug, Clone, Copy)]
-#[allow(clippy::enum_variant_names)]
-enum Keyword {
-    ProjectName,
-    ProjectNameDashesToUnderscores,
-    ProjectNameLowercase,
-}
-
-impl fmt::Display for Keyword {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Keyword::ProjectName => write!(f, "{{ProjectName}}"),
-            Keyword::ProjectNameDashesToUnderscores => {
-                write!(f, "{{ProjectName_DashesToUnderscores}}")
-            }
-            Keyword::ProjectNameLowercase => write!(f, "{{ProjectName_Lowercase}}"),
-        }
-    }
-}
-
-/// A program to automatically generate development environment files.
-#[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None)]
+/// An application for managing various development environment things.
+///
+/// The `language` and `platform` arguments are case-sensitive.
+#[derive(Debug, FromArgs)]
 struct Args {
-    /// Type of file to generate
-    file_types: Vec<FileType>,
+    /// the platform we're on (e.g. `arm`, `x86`). default 'x86'
+    #[argh(option, short = 'p', default = r#""x86".to_string()"#)]
+    platform: String,
+
+    /// the language we're using (e.g. `rust`, `python`). default 'rust'
+    #[argh(option, short = 'l', default = r#""rust".to_string()"#)]
+    language: String,
+
+    #[argh(subcommand)]
+    command: Command,
 }
 
-#[derive(Debug)]
-enum ProjectLanguage {
-    Rust,
-    Dotnet,
-    Unknown,
+#[derive(Debug, FromArgs)]
+#[argh(subcommand)]
+enum Command {
+    Create(Create),
+    Generate(Generate),
 }
 
-#[derive(Debug)]
-enum FileType {
-    Dockerfile,
-    Justfile,
-    Drone,
-}
-
-impl FromStr for FileType {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "dockerfile" | "docker" => Ok(FileType::Dockerfile),
-            "justfile" | "just" => Ok(FileType::Justfile),
-            "drone" => Ok(FileType::Drone),
-            _ => Err(format!("Unknown file type: {}", s)),
+impl Command {
+    pub fn create(self) -> Create {
+        match self {
+            Self::Create(c) => c,
+            Self::Generate(_) => unreachable!("optimize me son"),
         }
     }
+
+    pub fn generate(self) -> Generate {
+        match self {
+            Self::Create(_) => unreachable!("optimize me son"),
+            Self::Generate(c) => c,
+        }
+    }
+}
+
+/// Stores a new type of file for future use
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "create")]
+struct Create {
+    /// the kind of file we're creating
+    #[argh(positional)]
+    kind: SupportedKinds,
+
+    /// the file we're using as the template
+    #[argh(positional)]
+    template: PathBuf,
+}
+
+/// Generates a file based on the current environment
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "generate")]
+struct Generate {
+    /// the kind of file we're generating
+    #[argh(positional)]
+    kinds: Vec<SupportedKinds>,
 }
