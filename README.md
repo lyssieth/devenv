@@ -1,8 +1,8 @@
 # devenv
 
-It's a shitty devenv helper program.
+An application for settung up new projects/environments based on templates.
 
-`/files` contains some example files to poke at.
+`/files` contains some example templates to poke at.
 
 ## Purpose
 
