@@ -1,69 +1,59 @@
 #![warn(clippy::pedantic)]
 
-use std::{fmt, path::PathBuf, str::FromStr};
+use std::{
+    fmt::Debug,
+    fs,
+    path::PathBuf,
+    str::FromStr,
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 use argh::FromArgs;
-use color_eyre::{eyre::eyre, Report};
-use paris::warn;
+use color_eyre::{eyre, Report};
+use paris::{info, warn};
 use serde::{Deserialize, Serialize};
 
-mod files;
-
+mod config;
 mod create;
+mod files;
 mod generate;
 
 type Res<T> = Result<T, Report>;
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
-pub enum SupportedKinds {
-    Docker,
-    Drone,
-    Just,
-}
+static ROOT_CHECK: AtomicBool = AtomicBool::new(false);
 
-impl SupportedKinds {
-    #[must_use]
-    pub fn filename(&self) -> String {
-        match self {
-            Self::Docker => "Dockerfile".to_string(),
-            Self::Drone => ".drone.yml".to_string(),
-            Self::Just => "Justfile".to_string(),
-        }
+fn root() -> PathBuf {
+    let mut config = dirs::config_dir().unwrap();
+
+    config.push("devenv");
+
+    if !ROOT_CHECK.load(Ordering::SeqCst) && !config.exists() {
+        fs::create_dir_all(&config).unwrap_or_else(|_| panic!("Failed to create {:?}", &config));
+
+        ROOT_CHECK.swap(true, Ordering::SeqCst);
     }
-}
 
-impl fmt::Display for SupportedKinds {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Docker => write!(f, "docker"),
-            Self::Drone => write!(f, "drone"),
-            Self::Just => write!(f, "just"),
-        }
-    }
-}
-
-impl FromStr for SupportedKinds {
-    type Err = Report;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "docker" | "dockerfile" => Ok(Self::Docker),
-            "drone" => Ok(Self::Drone),
-            "just" | "justfile" => Ok(Self::Just),
-
-            _ => Err(eyre!("Unknown kind: {}", s)),
-        }
-    }
+    config
 }
 
 fn main() -> Res<()> {
     color_eyre::install()?;
+
+    if !config::Configuration::exists() {
+        config::Configuration::default().save()?;
+
+        info!(
+            "Created a default configuration at {:?}. We suggest editing it before further use.",
+            config::Configuration::path()
+        );
+    }
 
     let args: Args = argh::from_env();
 
     match args.command {
         Command::Create(_) => create::run(args),
         Command::Generate(_) => generate::run(args),
+        Command::Config(cfg) => cfg.action.run(),
     }?;
 
     Ok(())
@@ -113,31 +103,16 @@ struct Args {
 enum Command {
     Create(Create),
     Generate(Generate),
-}
-
-impl Command {
-    pub fn create(self) -> Create {
-        match self {
-            Self::Create(c) => c,
-            Self::Generate(_) => unreachable!("optimize me son"),
-        }
-    }
-
-    pub fn generate(self) -> Generate {
-        match self {
-            Self::Create(_) => unreachable!("optimize me son"),
-            Self::Generate(c) => c,
-        }
-    }
+    Config(Config),
 }
 
 /// Stores a new type of file for future use
 #[derive(Debug, FromArgs)]
 #[argh(subcommand, name = "create")]
 struct Create {
-    /// the kind of file we're creating
+    /// the tool we're creating a file for
     #[argh(positional)]
-    kind: SupportedKinds,
+    tool: String,
 
     /// the file we're using as the template
     #[argh(positional)]
@@ -150,5 +125,51 @@ struct Create {
 struct Generate {
     /// the kind of file we're generating
     #[argh(positional)]
-    kinds: Vec<SupportedKinds>,
+    kinds: Vec<String>,
+}
+
+/// Actions relating to the config
+#[derive(Debug, FromArgs)]
+#[argh(subcommand, name = "config")]
+struct Config {
+    /// the action to do. `regenerate` regenerates the config from the in-built default, `show` shows the current config, and `path` shows the path.
+    #[argh(positional)]
+    action: Action,
+}
+
+#[derive(Debug)]
+enum Action {
+    Regenerate,
+    Show,
+    Path,
+}
+
+impl Action {
+    pub fn run(&self) -> Res<()> {
+        match self {
+            Self::Regenerate => config::Configuration::default().save(),
+            Self::Show => {
+                println!("{:#?}", config::load()?);
+                Ok(())
+            }
+            Self::Path => {
+                println!("{:?}", config::Configuration::path());
+                Ok(())
+            }
+        }
+    }
+}
+
+impl FromStr for Action {
+    type Err = Report;
+
+    fn from_str(s: &str) -> Res<Self> {
+        match s.to_lowercase().as_str() {
+            "regenerate" => Ok(Self::Regenerate),
+            "show" => Ok(Self::Show),
+            "path" => Ok(Self::Path),
+
+            _ => Err(eyre::eyre!("Unknown action: {}", s)),
+        }
+    }
 }

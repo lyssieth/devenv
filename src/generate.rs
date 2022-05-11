@@ -1,27 +1,87 @@
-use std::{fs::File, io::Write};
+use std::{fs::File, io::Write, process};
 
 use paris::error;
 use tinytemplate::TinyTemplate;
 
-use crate::{files, Args, Generate, Res, Template};
+use crate::{
+    config::{self, Element, Tool},
+    files, Args, Command, Generate, Res, Template,
+};
+
+#[derive(Debug)]
+pub struct Arguments {
+    pub tools: Vec<Tool>,
+    pub platform: Element,
+    pub language: Element,
+}
+
+impl From<Args> for Arguments {
+    fn from(args: Args) -> Self {
+        let Args {
+            command,
+            language,
+            platform,
+        } = args;
+
+        let kinds = match command {
+            Command::Generate(Generate { kinds }) => kinds,
+
+            _ => {
+                unreachable!("we shouldn't be able to call this when it's generate")
+            }
+        };
+
+        let cfg = config::load().expect("Failed to load configuration file.");
+
+        let tools = kinds
+            .into_iter()
+            .filter_map(|kind| cfg.find_tool(&kind))
+            .cloned()
+            .collect();
+
+        let platform = cfg
+            .find_platform(&platform)
+            .unwrap_or_else(|| {
+                error!("Unknown platform: {}", platform);
+                process::exit(1);
+            })
+            .clone();
+
+        let language = cfg
+            .find_language(&language)
+            .unwrap_or_else(|| {
+                error!("Unknown language: {}", language);
+                process::exit(1);
+            })
+            .clone();
+
+        Self {
+            tools,
+            platform,
+            language,
+        }
+    }
+}
 
 pub(super) fn run(args: Args) -> Res<()> {
-    let Args {
+    let Arguments {
+        tools,
         platform,
         language,
-        command,
-    } = args;
-    let generate = command.generate();
+    } = args.into();
 
-    let Generate { kinds } = generate;
-
-    for x in kinds {
-        let f = files::get_file(x, &platform, &language);
+    for tool in tools {
+        let f = files::get_file(&tool, &platform, &language);
 
         let file = match f {
             Ok(f) => f,
             Err(e) => {
-                error!("There is no matching dev-file {platform}-{language} for {x}: {e}");
+                error!(
+                    "There is no matching dev-file {platform}-{language} for {tool}: {e}",
+                    platform = platform.as_str(),
+                    language = language.as_str(),
+                    tool = tool.as_str()
+                );
                 continue;
             }
         };
@@ -34,7 +94,7 @@ pub(super) fn run(args: Args) -> Res<()> {
 
         let output = tt.render("data", &Template::from_project_name(&get_project_name()))?;
 
-        File::create(&x.filename())?.write_all(output.as_bytes())?;
+        File::create(&tool.filename)?.write_all(output.as_bytes())?;
     }
 
     Ok(())

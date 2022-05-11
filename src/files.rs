@@ -12,25 +12,25 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use bincode::{DefaultOptions, Options};
+use bincode::{
+    config,
+    serde::{decode_from_std_read, encode_into_std_write},
+};
+use cached::proc_macro::cached;
 use color_eyre::eyre::eyre;
 use paris::warn;
 use serde::{Deserialize, Serialize};
 
-use crate::{Res, SupportedKinds};
+use crate::{
+    config::{Element, Tool},
+    root, Res,
+};
 
-fn root() -> PathBuf {
-    let mut config = dirs::config_dir().unwrap();
-
-    config.push("devenv");
-
-    config
-}
-
-fn which(which: SupportedKinds) -> PathBuf {
+#[cached(key = "String", convert = r#"{ which.name.clone() }"#)]
+fn which(which: &Tool) -> PathBuf {
     let mut root = root();
 
-    root.push(which.to_string());
+    root.push(&which.name);
 
     root
 }
@@ -38,24 +38,26 @@ fn which(which: SupportedKinds) -> PathBuf {
 /// We use an extension so it's obvious that it's not _just_ an editable file.
 const EXTENSION: &str = "bc";
 
-pub fn get_file(sk: SupportedKinds, platform: &str, language: &str) -> Res<DevFile> {
-    if !root().exists() {
-        fs::create_dir_all(root())?;
-    }
-    let path = which(sk).join(format!("{}-{}.{}", platform, language, EXTENSION));
+pub fn get_file(tool: &Tool, platform: &Element, language: &Element) -> Res<DevFile> {
+    let path = which(tool).join(format!("{}-{}.{}", platform.name, language.name, EXTENSION));
 
-    if !which(sk).exists() {
-        fs::create_dir(which(sk))?;
+    if !which(tool).exists() {
+        fs::create_dir(which(tool))?;
     }
 
     let path = if path.exists() {
         path
     } else {
-        which(sk).join(format!("{}-{}.{}", platform, "any", EXTENSION))
+        which(tool).join(format!("{}-{}.{}", platform.name, "any", EXTENSION))
     };
 
     if !path.exists() {
-        warn!("There is no `{language}` or `any` file for `{platform}` & `{sk}`");
+        warn!(
+            "There is no `{language}` or `any` file for `{platform}` & `{tool}`",
+            language = language.name,
+            platform = platform.name,
+            tool = tool.name
+        );
         return Err(eyre!("No file found"));
     }
 
@@ -63,14 +65,13 @@ pub fn get_file(sk: SupportedKinds, platform: &str, language: &str) -> Res<DevFi
 }
 
 pub fn create_file(df: &DevFile) -> Res<()> {
-    if !root().exists() {
-        fs::create_dir_all(root())?;
-    }
+    let path = which(&df.tool).join(format!(
+        "{}-{}.{}",
+        &df.platform.name, &df.language.name, EXTENSION
+    ));
 
-    let path = which(df.which).join(format!("{}-{}.{}", &df.platform, &df.language, EXTENSION));
-
-    if !which(df.which).exists() {
-        fs::create_dir(which(df.which))?;
+    if !which(&df.tool).exists() {
+        fs::create_dir(which(&df.tool))?;
     }
 
     df.save(&path)
@@ -78,9 +79,9 @@ pub fn create_file(df: &DevFile) -> Res<()> {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct DevFile {
-    pub language: String,
-    pub platform: String,
-    pub which: SupportedKinds,
+    pub language: Element,
+    pub platform: Element,
+    pub tool: Tool,
     pub data: String,
 }
 
@@ -88,19 +89,15 @@ impl DevFile {
     pub fn save(&self, path: &Path) -> Res<()> {
         let mut file = std::fs::File::create(path)?;
 
-        DefaultOptions::new()
-            .allow_trailing_bytes()
-            .serialize_into(&mut file, self)?;
+        encode_into_std_write(self, &mut file, config::standard())?;
 
         Ok(())
     }
 
     pub fn load(path: &Path) -> Res<Self> {
-        let file = std::fs::File::open(path)?;
+        let mut file = std::fs::File::open(path)?;
 
-        let res = DefaultOptions::new()
-            .allow_trailing_bytes()
-            .deserialize_from(file)?;
+        let res = decode_from_std_read(&mut file, config::standard())?;
 
         Ok(res)
     }
