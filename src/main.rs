@@ -86,12 +86,12 @@ impl Template {
 /// The `language` and `platform` arguments are case-sensitive.
 #[derive(Debug, FromArgs)]
 struct Args {
-    /// the platform we're on (e.g. `arm`, `x86`). default 'x86'
-    #[argh(option, short = 'p', default = r#""x86".to_string()"#)]
+    /// the platform we're on (e.g. `arm`, `x86`). default 'any'
+    #[argh(option, short = 'p', default = r#""any".to_string()"#)]
     platform: String,
 
-    /// the language we're using (e.g. `rust`, `python`). default 'rust'
-    #[argh(option, short = 'l', default = r#""rust".to_string()"#)]
+    /// the language we're using (e.g. `rust`, `python`). default 'any'
+    #[argh(option, short = 'l', default = r#""any".to_string()"#)]
     language: String,
 
     #[argh(subcommand)]

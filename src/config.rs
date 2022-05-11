@@ -29,22 +29,39 @@ impl Configuration {
         Self::path().exists()
     }
 
-    pub fn find_tool(&self, name: &str) -> Option<&Tool> {
-        self.tools.iter().find(|tool| {
-            tool.element.name == name || tool.element.aliases.iter().any(|alias| alias == name)
-        })
+    pub fn find_tool(&self, name: &str) -> Option<Tool> {
+        self.tools
+            .iter()
+            .find(|tool| {
+                tool.element.name == name || tool.element.aliases.iter().any(|alias| alias == name)
+            })
+            .cloned()
     }
 
-    pub fn find_language(&self, name: &str) -> Option<&Element> {
-        self.languages.iter().find(|language| {
-            language.name == name || language.aliases.iter().any(|alias| alias == name)
-        })
+    pub fn find_language(&self, name: &str) -> Option<Element> {
+        if name == "any" {
+            return Some(Element::default());
+        }
+
+        self.languages
+            .iter()
+            .find(|language| {
+                language.name == name || language.aliases.iter().any(|alias| alias == name)
+            })
+            .cloned()
     }
 
-    pub fn find_platform(&self, name: &str) -> Option<&Element> {
-        self.platforms.iter().find(|platform| {
-            platform.name == name || platform.aliases.iter().any(|alias| alias == name)
-        })
+    pub fn find_platform(&self, name: &str) -> Option<Element> {
+        if name == "any" {
+            return Some(Element::default());
+        }
+
+        self.platforms
+            .iter()
+            .find(|platform| {
+                platform.name == name || platform.aliases.iter().any(|alias| alias == name)
+            })
+            .cloned()
     }
 
     pub fn save(&self) -> Res<()> {
@@ -102,6 +119,15 @@ pub fn load() -> Res<Configuration> {
 pub struct Element {
     pub name: String,
     pub aliases: Vec<String>,
+}
+
+impl Default for Element {
+    fn default() -> Self {
+        Self {
+            name: "any".to_string(),
+            aliases: vec![],
+        }
+    }
 }
 
 impl Deref for Element {
