@@ -1,3 +1,10 @@
 {
-  "cSpell.words": ["bincode", "devenv", "struct", "tinytemplate", "WORKDIR"]
+  "cSpell.words": [
+    "bincode",
+    "containerifying",
+    "devenv",
+    "struct",
+    "tinytemplate",
+    "WORKDIR"
+  ]
 }

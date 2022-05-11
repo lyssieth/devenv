@@ -4,6 +4,10 @@ It's a shitty devenv helper program.
 
 `/files` contains some example files to poke at.
 
+## Purpose
+
+The purpose of this project is to help with the initial setup of a new project. Like creating templated CI/CD pipelines for testing/linting/whatever, base `Dockerfile`s, `Justfile`s or `Makefile`s, etc.
+
 ## Usage
 
 The root of all commands is
