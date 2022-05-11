@@ -105,4 +105,3 @@ This prints out the current config file as a pretty-printed Rust struct.
 ## Problems
 
 - It's probably got bugs. I haven't tested it much. It works in my use-case, and I haven't had reason to test it.
-- It's hosted here on <https://git.lys.ee>, where nobody else can add issues or w/e.
