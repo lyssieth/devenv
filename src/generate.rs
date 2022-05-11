@@ -4,7 +4,7 @@ use paris::error;
 use tinytemplate::TinyTemplate;
 
 use crate::{
-    config::{self, Element, Tool},
+    config::{self, Configuration, Element, Tool},
     files, Args, Command, Generate, Res, Template,
 };
 
@@ -35,7 +35,17 @@ impl From<Args> for Arguments {
 
         let tools = kinds
             .into_iter()
-            .filter_map(|kind| cfg.find_tool(&kind))
+            .filter_map(|kind| {
+                let tool = cfg.find_tool(&kind);
+
+                if let Some(tool) = tool {
+                    Some(tool)
+                } else {
+                    error!("Unknown tool: {}", kind);
+                    error!("Please go define it in {:?}", Configuration::path());
+                    None
+                }
+            })
             .cloned()
             .collect();
 
@@ -43,6 +53,7 @@ impl From<Args> for Arguments {
             .find_platform(&platform)
             .unwrap_or_else(|| {
                 error!("Unknown platform: {}", platform);
+                error!("Please go define it in {:?}", Configuration::path());
                 process::exit(1);
             })
             .clone();
@@ -51,6 +62,7 @@ impl From<Args> for Arguments {
             .find_language(&language)
             .unwrap_or_else(|| {
                 error!("Unknown language: {}", language);
+                error!("Please go define it in {:?}", Configuration::path());
                 process::exit(1);
             })
             .clone();

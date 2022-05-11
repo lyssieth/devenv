@@ -3,7 +3,7 @@ use std::{fs::read_to_string, process};
 use paris::error;
 
 use crate::{
-    config::{self, Element, Tool},
+    config::{self, Configuration, Element, Tool},
     files::{self, DevFile},
     Args, Command, Create, Res,
 };
@@ -38,7 +38,7 @@ impl From<Args> for Arguments {
             .find_tool(&tool)
             .unwrap_or_else(|| {
                 error!("Unknown tool: {}", tool);
-                error!("Please go define it in ~/.config/devenv/config.yml");
+                error!("Please go define it in {:?}", Configuration::path());
                 process::exit(1);
             })
             .clone();
@@ -47,7 +47,7 @@ impl From<Args> for Arguments {
             .find_platform(&platform)
             .unwrap_or_else(|| {
                 error!("Unknown platform: {}", platform);
-                error!("Please go define it in ~/.config/devenv/config.yml");
+                error!("Please go define it in {:?}", Configuration::path());
                 process::exit(1);
             })
             .clone();
@@ -56,7 +56,7 @@ impl From<Args> for Arguments {
             .find_language(&language)
             .unwrap_or_else(|| {
                 error!("Unknown language: {}", language);
-                error!("Please go define it in ~/.config/devenv/config.yml");
+                error!("Please go define it in {:?}", Configuration::path());
                 process::exit(1);
             })
             .clone();
