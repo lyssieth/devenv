@@ -46,26 +46,19 @@ impl From<Args> for Arguments {
                     None
                 }
             })
-            .cloned()
             .collect();
 
-        let platform = cfg
-            .find_platform(&platform)
-            .unwrap_or_else(|| {
-                error!("Unknown platform: {}", platform);
-                error!("Please go define it in {:?}", Configuration::path());
-                process::exit(1);
-            })
-            .clone();
+        let platform = cfg.find_platform(&platform).unwrap_or_else(|| {
+            error!("Unknown platform: {}", platform);
+            error!("Please go define it in {:?}", Configuration::path());
+            process::exit(1);
+        });
 
-        let language = cfg
-            .find_language(&language)
-            .unwrap_or_else(|| {
-                error!("Unknown language: {}", language);
-                error!("Please go define it in {:?}", Configuration::path());
-                process::exit(1);
-            })
-            .clone();
+        let language = cfg.find_language(&language).unwrap_or_else(|| {
+            error!("Unknown language: {}", language);
+            error!("Please go define it in {:?}", Configuration::path());
+            process::exit(1);
+        });
 
         Self {
             tools,
@@ -89,7 +82,7 @@ pub(super) fn run(args: Args) -> Res<()> {
             Ok(f) => f,
             Err(e) => {
                 error!(
-                    "There is no matching dev-file {platform}-{language} for {tool}: {e}",
+                    "There is no matching template file {platform}-{language} for {tool}: {e}",
                     platform = platform.as_str(),
                     language = language.as_str(),
                     tool = tool.as_str()

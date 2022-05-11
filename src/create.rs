@@ -34,32 +34,23 @@ impl From<Args> for Arguments {
 
         let cfg = config::load().expect("Failed to load configuration file.");
 
-        let tool = cfg
-            .find_tool(&tool)
-            .unwrap_or_else(|| {
-                error!("Unknown tool: {}", tool);
-                error!("Please go define it in {:?}", Configuration::path());
-                process::exit(1);
-            })
-            .clone();
+        let tool = cfg.find_tool(&tool).unwrap_or_else(|| {
+            error!("Unknown tool: {}", tool);
+            error!("Please go define it in {:?}", Configuration::path());
+            process::exit(1);
+        });
 
-        let platform = cfg
-            .find_platform(&platform)
-            .unwrap_or_else(|| {
-                error!("Unknown platform: {}", platform);
-                error!("Please go define it in {:?}", Configuration::path());
-                process::exit(1);
-            })
-            .clone();
+        let platform = cfg.find_platform(&platform).unwrap_or_else(|| {
+            error!("Unknown platform: {}", platform);
+            error!("Please go define it in {:?}", Configuration::path());
+            process::exit(1);
+        });
 
-        let language = cfg
-            .find_language(&language)
-            .unwrap_or_else(|| {
-                error!("Unknown language: {}", language);
-                error!("Please go define it in {:?}", Configuration::path());
-                process::exit(1);
-            })
-            .clone();
+        let language = cfg.find_language(&language).unwrap_or_else(|| {
+            error!("Unknown language: {}", language);
+            error!("Please go define it in {:?}", Configuration::path());
+            process::exit(1);
+        });
 
         Self {
             tool,
