@@ -5,6 +5,9 @@ edition = "2021"
 license = "MIT"
 readme = "README.md"
 description = "An application for settung up new projects/environments based on templates."
+authors = ["Lyssietn <lys@lys.ee>"]
+homepage = "https://github.com/lyssieth/devenv"
+repository = "https://github.com/lyssieth/devenv"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
