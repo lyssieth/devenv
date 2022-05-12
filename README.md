@@ -8,6 +8,12 @@ An application for settung up new projects/environments based on templates.
 
 The purpose of this project is to help with the initial setup of a new project. Like creating templated CI/CD pipelines for testing/linting/whatever, base `Dockerfile`s, `Justfile`s or `Makefile`s, etc.
 
+## Installation
+
+`cargo install devenv`
+
+Or, if you wish to use the latest build, `cargo install --git https://github.com/lyssieth/devenv.git`
+
 ## Usage
 
 The root of all commands is
