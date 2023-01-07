@@ -1,4 +1,4 @@
-#![warn(clippy::pedantic)]
+#![warn(clippy::pedantic, clippy::nursery)]
 
 use std::{
     fmt::Debug,
@@ -85,7 +85,7 @@ impl Template {
 ///
 /// The `language` and `platform` arguments are case-sensitive.
 #[derive(Debug, FromArgs)]
-struct Args {
+pub struct Args {
     /// the platform we're on (e.g. `arm`, `x86`). default 'any'
     #[argh(option, short = 'p', default = r#""any".to_string()"#)]
     platform: String,

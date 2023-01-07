@@ -56,12 +56,12 @@ impl From<Args> for Arguments {
             tool,
             platform,
             language,
-            data: read_to_string(&template).expect("Failed to read file"),
+            data: read_to_string(template).expect("Failed to read file"),
         }
     }
 }
 
-pub(super) fn run(args: Args) -> Res<()> {
+pub fn run(args: Args) -> Res<()> {
     let Arguments {
         tool,
         platform,

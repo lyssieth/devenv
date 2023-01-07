@@ -38,13 +38,14 @@ impl From<Args> for Arguments {
             .filter_map(|kind| {
                 let tool = cfg.find_tool(&kind);
 
-                if let Some(tool) = tool {
-                    Some(tool)
-                } else {
-                    error!("Unknown tool: {}", kind);
-                    error!("Please go define it in {:?}", Configuration::path());
-                    None
-                }
+                tool.map_or_else(
+                    || {
+                        error!("Unknown tool: {}", kind);
+                        error!("Please go define it in {:?}", Configuration::path());
+                        None
+                    },
+                    Some,
+                )
             })
             .collect();
 
@@ -68,7 +69,7 @@ impl From<Args> for Arguments {
     }
 }
 
-pub(super) fn run(args: Args) -> Res<()> {
+pub fn run(args: Args) -> Res<()> {
     let Arguments {
         tools,
         platform,

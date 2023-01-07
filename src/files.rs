@@ -39,7 +39,7 @@ fn which(which: &Tool) -> PathBuf {
 const EXTENSION: &str = "bc";
 
 pub fn get_file(tool: &Tool, platform: &Element, language: &Element) -> Res<DevFile> {
-    let path = which(tool).join(format!("{}-{}.{}", platform.name, language.name, EXTENSION));
+    let path = which(tool).join(format!("{}-{}.{EXTENSION}", platform.name, language.name));
 
     if !which(tool).exists() {
         fs::create_dir(which(tool))?;
@@ -48,7 +48,7 @@ pub fn get_file(tool: &Tool, platform: &Element, language: &Element) -> Res<DevF
     let path = if path.exists() {
         path
     } else {
-        which(tool).join(format!("{}-{}.{}", platform.name, "any", EXTENSION))
+        which(tool).join(format!("{}-{}.{EXTENSION}", platform.name, "any"))
     };
 
     if !path.exists() {
@@ -66,8 +66,8 @@ pub fn get_file(tool: &Tool, platform: &Element, language: &Element) -> Res<DevF
 
 pub fn create_file(df: &DevFile) -> Res<()> {
     let path = which(&df.tool).join(format!(
-        "{}-{}.{}",
-        &df.platform.name, &df.language.name, EXTENSION
+        "{}-{}.{EXTENSION}",
+        &df.platform.name, &df.language.name
     ));
 
     if !which(&df.tool).exists() {

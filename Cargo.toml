@@ -12,12 +12,12 @@ repository = "https://github.com/lyssieth/devenv"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-argh = "0.1.7"
-bincode = { version = "2.0.0-rc.1", features = ["serde"] }
-cached = "0.34.0"
-color-eyre = "0.6.1"
+argh = "0.1.9"
+bincode = { version = "2.0.0-rc.2", features = ["serde"] }
+cached = "0.42.0"
+color-eyre = "0.6.2"
 dirs = "4.0.0"
 paris = { version = "1.5.13", features = ["macros", "no_logger"] }
-serde = { version = "1.0.137", features = ["derive"] }
-serde_yaml = "0.8.24"
+serde = { version = "1.0.152", features = ["derive"] }
+serde_yaml = "0.9.16"
 tinytemplate = "1.2.1"

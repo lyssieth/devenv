@@ -67,7 +67,7 @@ impl Configuration {
     pub fn save(&self) -> Res<()> {
         let path = Self::path();
 
-        let mut file = File::create(&path)?;
+        let mut file = File::create(path)?;
 
         serde_yaml::to_writer(&mut file, &self)?;
 
@@ -110,7 +110,7 @@ impl Default for Configuration {
 pub fn load() -> Res<Configuration> {
     let path = Configuration::path();
 
-    let content = read_to_string(&path)?;
+    let content = read_to_string(path)?;
 
     Ok(serde_yaml::from_str(&content)?)
 }
